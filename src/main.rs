@@ -202,8 +202,24 @@ impl Board {
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
                 for z in 0..BOARD_SIZE {
-                    if self.points[x][y][z] && self.neighbours[x][y][z] == 0 {
-                        return false;
+                    if !self.points[x][y][z] {
+                        if self.neighbours[x][y][z] == 0 {
+                            return false;
+                        }
+                        if self.neighbours[x][y][z] == 1 {
+                            let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
+                            for offset in offsets {
+                                let offset_x = x as i32 + offset.0;
+                                let offset_y = y as i32 + offset.1;
+                                let offset_z = z as i32 + offset.2;
+                                if (cmp::max(cmp::max(offset_x, offset_y),cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
+                                    cmp::min(cmp::min(offset_x, offset_y),cmp::min(offset_z, 0)) > -1 &&
+                                    !self.points[offset_x as usize][offset_y as usize][offset_z as usize] &&
+                                    self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] < 3) {
+                                        return false;
+                                }
+                            }
+                        }
                     }
                 }
             }
