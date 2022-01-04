@@ -99,7 +99,8 @@ fn main() {
 }
 
 struct Board {
-    points: BoardType
+    points: BoardType,
+    neighbours: [[[usize; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE]
 }
 
 impl fmt::Debug for Board {
@@ -124,38 +125,111 @@ impl fmt::Debug for Board {
 
 impl Board {
     fn create_empty_board() -> Board {
-        Board {
-            points: [[[false; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE]
+        let mut board = Board {
+            points: [[[false; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE],
+            neighbours: [[[6;  BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE]
+        };
+
+        for x in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                board.neighbours[0][x][y] -= 1;
+                board.neighbours[x][0][y] -= 1;
+                board.neighbours[x][y][0] -= 1;
+
+                board.neighbours[BOARD_SIZE-1][x][y] -= 1;
+                board.neighbours[x][BOARD_SIZE-1][y] -= 1;
+                board.neighbours[x][y][BOARD_SIZE-1] -= 1;
+            }
         }
+
+        board
     }
 
     fn fill_with(&mut self, block_types: BlockTypes) {
         self.fill_next(&block_types, 0, &build_point(0, 0, 0));
     }
 
-    fn fill_next(&mut self, block_types: &BlockTypes, next_block_type_index: usize, next_point_start: &Point) -> bool {
-        let points = &block_types[next_block_type_index].create_block_position(next_point_start).points;
-//        println!("check points: {:?}", points);
+    fn put(&mut self, block: &BlockPosition) -> bool {
+        let points = &block.points;
         for point in points {
             if point.x == BOARD_SIZE || point.y == BOARD_SIZE || point.z == BOARD_SIZE || self.points[point.x][point.y][point.z] { return false; }
         }
 
+        let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
         for point in points {
             self.points[point.x][point.y][point.z] = true;
+            for offset in offsets {
+                        let offset_x = point.x as i32 + offset.0;
+                        let offset_y = point.y as i32 + offset.1;
+                        let offset_z = point.z as i32 + offset.2;
+                        if (cmp::max(cmp::max(offset_x, offset_y),cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
+                            cmp::min(cmp::min(offset_x, offset_y),cmp::min(offset_z, 0)) > -1) {
+                            if (offset_x == 1 && offset_y == 1 && offset_z == 4) {
+                      //          println!("+block: {:?}", block);
+  //                          println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
+   //                         println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
+                            }
+                            self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] -= 1;
+                        }
+            }
         }
 
+        return true;
+    }
+
+    fn take(&mut self, block: &BlockPosition) {
+        let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
+        for point in &block.points {
+            self.points[point.x][point.y][point.z] = false;
+            for offset in offsets {
+                        let offset_x = point.x as i32 + offset.0;
+                        let offset_y = point.y as i32 + offset.1;
+                        let offset_z = point.z as i32 + offset.2;
+                        if (cmp::max(cmp::max(offset_x, offset_y),cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
+                            cmp::min(cmp::min(offset_x, offset_y),cmp::min(offset_z, 0)) > -1) {
+                            if (offset_x == 1 && offset_y == 1 && offset_z == 4) {
+                     //           println!("-block: {:?}", block);
+//                            println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
+ //                           println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
+                            }
+                            self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] += 1;
+                        }
+            }
+        }
+    }
+
+    fn has_no_holes(&self) -> bool {
+        for x in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                for z in 0..BOARD_SIZE {
+                    if self.points[x][y][z] && self.neighbours[x][y][z] == 0 {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    fn fill_next(&mut self, block_types: &BlockTypes, next_block_type_index: usize, next_point_start: &Point) -> bool {
+        let block = &block_types[next_block_type_index].create_block_position(next_point_start);
+        //println!("check points: {:?}", block);
+
+        if !self.put(block) { return false; };
+
         if self.full() { 
-            println!("points: {:?}", points);
+            println!("block: {:?}", block);
             return true;
         };
 
-        if self.dense() {
+        if self.dense() && self.has_no_holes() {
             for x in 0..BOARD_SIZE {
                 for y in 0..BOARD_SIZE {
                     for z in 0..BOARD_SIZE {
                         for block_type in 0..NUM_OF_BLOCK_TYPES {
                             if self.fill_next(&block_types, block_type, &build_point(x, y, z)) {
-                                println!("points: {:?}", points);
+                                println!("block: {:?}", block);
                                 return true;
                             }
                         }
@@ -164,9 +238,7 @@ impl Board {
             }
         }
 
-        for point in points {
-            self.points[point.x][point.y][point.z] = false;
-        }
+        self.take(block);
 //        println!("removed points: {:?}", points);
 
         //let fullAfterNext = self.fill_next(blockTypes, 
@@ -219,6 +291,7 @@ fn build_point(x: usize, y: usize, z: usize) -> Point {
     }
 }
 
+#[derive(Debug)]
 struct BlockPosition {
     points: [Point; BLOCK_SIZE]
 }
