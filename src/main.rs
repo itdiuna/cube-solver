@@ -22,76 +22,77 @@ fn main() {
 
     let block_types: BlockTypes = [
         BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(1, 0, 0),
-            p3: build_point(1, 1, 0),
-            p4: build_point(2, 0, 0)
+            p2: build_point(0, 0, 0),   // |0
+            p1: build_point(0, 0, -1),  // |0_
+            p3: build_point(0, -1, 0),  //  0
+            p4: build_point(0, 1, 0)
         },
         BlockType {
-            p1: build_point(0, 1, 0),
-            p2: build_point(1, 1, 0),
-            p3: build_point(1, 0, 0),
-            p4: build_point(1, 2, 0)
+            p1: build_point(0, 0, 0),   //  |
+            p2: build_point(0, 0, -1),  // 0|00_
+            p3: build_point(1, 0, 0),   //
+            p4: build_point(-1, 0, 0)
+        },
+
+        BlockType {
+            p3: build_point(0, 0, 0),   //  |0
+            p1: build_point(-1, 0, 0),  // <|0_
+            p2: build_point(0, 1, 0),   //   0
+            p4: build_point(0, -1, 0)
         },
         BlockType {
-            p1: build_point(0, 1, 0),
-            p2: build_point(1, 0, 0),
-            p3: build_point(1, 1, 0),
-            p4: build_point(2, 1, 0)
+            p2: build_point(0, 0, 0),  //  |
+            p1: build_point(-1, 0, 0), // <|0_
+            p3: build_point(0, 0, 1),  //
+            p4: build_point(0, 0, -1)
         },
         BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(0, 1, 0),
-            p3: build_point(0, 2, 0),
-            p4: build_point(1, 1, 0)
+            p3: build_point(0, 0, 0),  //  |
+            p2: build_point(1, -1, 0), // 0|00_
+            p1: build_point(-1, 0, 0), //   v
+            p4: build_point(1, 0, 0)
         },
         BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(1, 0, 0),
-            p3: build_point(1, 0, 1),
-            p4: build_point(2, 0, 0)
+            p3: build_point(0, 0, 0),  // |
+            p2: build_point(0, -1, 0), // |0_
+            p1: build_point(0, 0, 1),  //  v
+            p4: build_point(0, 0, -1)
         },
         BlockType {
-            p1: build_point(0, 0, 1),
-            p2: build_point(1, 0, 1),
-            p3: build_point(1, 0, 0),
-            p4: build_point(1, 0, 2)
+            p2: build_point(0, 0, 0),  // |0
+            p4: build_point(0, 0, 1),  // |x_
+            p1: build_point(0, -1, 0), //  0
+            p3: build_point(0, 1, 0)
         },
         BlockType {
-            p1: build_point(0, 0, 1),
-            p2: build_point(1, 0, 0),
-            p3: build_point(1, 0, 1),
-            p4: build_point(2, 0, 1)
+            p2: build_point(0, 0, 0),  //  |
+            p3: build_point(0, 0, 1),  // 0|x0_
+            p1: build_point(-1, 0, 0), //
+            p4: build_point(1, 0, 0)
         },
         BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(0, 0, 1),
-            p3: build_point(0, 0, 2),
-            p4: build_point(1, 0, 1)
+            p2: build_point(0, 0, 0),  // |
+            p4: build_point(1, 0, 0),  // |0>_
+            p1: build_point(0, 0, -1), //
+            p3: build_point(0, 0, 1)
         },
         BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(0, 0, 1),
-            p3: build_point(0, 1, 1),
-            p4: build_point(0, 0, 2)
+            p2: build_point(0, 0, 0),  // |0
+            p4: build_point(1, 0, 0),  // |0>_
+            p1: build_point(0, -1, 0), //  0
+            p3: build_point(0, 1, 0)
         },
         BlockType {
-            p1: build_point(0, 1, 0),
-            p2: build_point(0, 1, 1),
-            p3: build_point(0, 0, 1),
-            p4: build_point(0, 2, 1)
+            p2: build_point(0, 0, 0),  //  |^
+            p3: build_point(0, 1, 0),  // 0|00_
+            p1: build_point(-1, 0, 0), //
+            p4: build_point(1, 0, 0)
         },
         BlockType {
-            p1: build_point(0, 1, 0),
-            p2: build_point(0, 0, 1),
-            p3: build_point(0, 1, 1),
-            p4: build_point(0, 1, 2)
-        },
-        BlockType {
-            p1: build_point(0, 0, 0),
-            p2: build_point(0, 1, 0),
-            p3: build_point(0, 2, 0),
-            p4: build_point(0, 1, 1)
+            p2: build_point(0, 0, 0),  //  |^
+            p3: build_point(0, 1, 0),  //  |0_
+            p1: build_point(0, 0, -1), //
+            p4: build_point(0, 0, 1)
         }
     ];
 
@@ -109,11 +110,12 @@ struct Board {
 impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut heights = [[0; BOARD_SIZE]; BOARD_SIZE];
-        for x in 0..BOARD_SIZE {
-            for y in 0..BOARD_SIZE {
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
                 for z in 0..BOARD_SIZE {
                     if self.points[x][y][z] {
-                        heights[y][z] = x+1;
+                        println!("{} {} {}", x, y, z);
+                        heights[y][x] = z+1;
                     }
                 }
             }
@@ -150,47 +152,71 @@ impl Board {
     }
 
     fn generate() -> [Point; POINT_ORDER_SIZE] {
-        let initPoint = build_point(0, 0, 0);
-        let mut order = [initPoint; POINT_ORDER_SIZE];
+        let init_point = build_point(0, 0, 0);
+        let mut order = [init_point; POINT_ORDER_SIZE];
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
                 for z in 0..BOARD_SIZE {
-                    let k = Self::cantorPairing(x, Self::cantorPairing(y, z));
+                    let k = Self::cantor_pairing(x, Self::cantor_pairing(y, z));
 //                    println!("{:?}: {:?} {:?} {:?}", k, x, y, z);
-                    order[k] = build_point(x, y, z);
+                    order[k] = build_point(x as i32, y as i32, z as i32);
                 }
             }
         }
         order
     }
 
-    fn cantorPairing(k1: usize, k2: usize) -> usize {
+    fn cantor_pairing(k1: usize, k2: usize) -> usize {
         (k1+k2)*(k1+k2+1)/2 + k2
     }
 
     fn fill_with(&mut self, block_types: BlockTypes) {
-        self.fill_next(&block_types, 0, 0);
+        self.fill_next(&block_types, 7, 1);
+    }
+
+    fn occupied(&self, point: Point) -> bool {
+        self.points[point.x as usize][point.y as usize][point.z as usize]
+    }
+
+    fn occupy(&mut self, point: Point) {
+        self.update(point, true);
+    }
+
+    fn release(&mut self, point: Point) {
+        self.update(point, false);
+    }
+
+    fn update(&mut self, point: Point, new_val: bool) {
+        self.points[point.x as usize][point.y as usize][point.z as usize] = new_val;
     }
 
     fn put(&mut self, block: &BlockPosition) -> bool {
         let points = &block.points;
-        for point in points {
-            if point.x >= BOARD_SIZE || point.y >= BOARD_SIZE || point.z >= BOARD_SIZE || self.points[point.x][point.y][point.z] { return false; }
+        for &point in points {
+            if cmp::max(cmp::max(0, point.x), cmp::max(point.y, point.z)) >= BOARD_SIZE as i32 ||
+                cmp::min(cmp::min(0, point.x), cmp::min(point.y, point.z)) < 0 as i32 ||
+                self.occupied(point) {
+                    return false;
+                }
         }
 
         let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
-        for point in points {
-            self.points[point.x][point.y][point.z] = true;
+        for &point in points {
+            self.occupy(point);
             for offset in offsets {
                         let offset_x = point.x as i32 + offset.0;
                         let offset_y = point.y as i32 + offset.1;
                         let offset_z = point.z as i32 + offset.2;
                         if (cmp::max(cmp::max(offset_x, offset_y),cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
                             cmp::min(cmp::min(offset_x, offset_y),cmp::min(offset_z, 0)) > -1) {
-                            if (offset_x == 1 && offset_y == 1 && offset_z == 4) {
-                      //          println!("+block: {:?}", block);
-  //                          println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
-   //                         println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
+//                                println!("+block: {:?}", block);
+ //                           println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
+                            if (offset_x == 1 && offset_y == 0 && offset_z == 0) {
+//                                println!("board: {:?}", self);
+//                                println!("+block: {:?}", block);
+//                                println!("point: {:?}", point);
+//                            println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
+//                            println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
                             }
                             self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] -= 1;
                         }
@@ -202,18 +228,18 @@ impl Board {
 
     fn take(&mut self, block: &BlockPosition) {
         let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
-        for point in &block.points {
-            self.points[point.x][point.y][point.z] = false;
+        for &point in &block.points {
+            self.release(point);
             for offset in offsets {
                         let offset_x = point.x as i32 + offset.0;
                         let offset_y = point.y as i32 + offset.1;
                         let offset_z = point.z as i32 + offset.2;
                         if (cmp::max(cmp::max(offset_x, offset_y),cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
                             cmp::min(cmp::min(offset_x, offset_y),cmp::min(offset_z, 0)) > -1) {
-                            if (offset_x == 1 && offset_y == 1 && offset_z == 4) {
-                     //           println!("-block: {:?}", block);
+                            if (offset_x == 1 && offset_y == 0 && offset_z == 0) {
+//                                println!("-block: {:?}", block);
 //                            println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
- //                           println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
+//                            println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
                             }
                             self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] += 1;
                         }
@@ -262,8 +288,8 @@ impl Board {
             return true;
         };
 
-//        println!("{}", start_point_index);
-        if self.dense() && self.has_no_holes() {
+        //println!("{}", start_point_index);
+        if self.has_no_holes() {
             for k in (start_point_index+1)..POINT_ORDER_SIZE {
                 for block_type in 0..NUM_OF_BLOCK_TYPES {
                     if self.fill_next(&block_types, block_type, k) {
@@ -307,19 +333,19 @@ impl Board {
             }
         }
 
-       // println!("busy_count: {}, spread: {}, board: {:?}", busy_count, spread, &self);
+        println!("busy_count: {}, spread: {}, board: {:?}", busy_count, spread, &self);
         return busy_count >= ((spread+1).pow(3) as f32 * DENSITY_FACTOR) as i32;
     }
 }
 
 #[derive(Debug, Copy, Clone)]
 struct Point {
-    x: usize,
-    y: usize,
-    z: usize
+    x: i32,
+    y: i32,
+    z: i32
 }
 
-fn build_point(x: usize, y: usize, z: usize) -> Point {
+fn build_point(x: i32, y: i32, z: i32) -> Point {
     Point {
         x,
         y,
