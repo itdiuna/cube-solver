@@ -338,7 +338,7 @@ impl Board {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 struct Point {
     x: i32,
     y: i32,
