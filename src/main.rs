@@ -3,6 +3,8 @@ use std::cmp;
 
 const BOARD_SIZE: usize = 6;
 
+const ALL_POINTS: usize = BOARD_SIZE.pow(3);
+
 const POINT_ORDER_SIZE: usize = (BOARD_SIZE + 1).pow(3) * 8;
 
 const BLOCK_SIZE: usize = 4;
@@ -108,13 +110,16 @@ struct Board {
 
 impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut heights = [[0; BOARD_SIZE]; BOARD_SIZE];
+        let mut heights: [[i32; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
+        let mut free = 0;
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
                 for z in 0..BOARD_SIZE {
                     if self.points[x][y][z] {
-                        println!("{} {} {}", x, y, z);
-                        heights[y][x] = z + 1;
+//                        println!("{} {} {}", x, y, z);
+                        heights[y][x] = z as i32 + 1;
+                    } else {
+                        free += 1;
                     }
                 }
             }
@@ -123,7 +128,7 @@ impl fmt::Debug for Board {
         for x in 0..BOARD_SIZE {
             write!(f, "\n{:?}", heights[x]);
         }
-        write!(f, "\n---")
+        write!(f, "\n--- free: {:?} full layers: {}", free, self.full_layers())
     }
 }
 
@@ -147,6 +152,42 @@ impl Board {
         }
 
         board
+    }
+
+    fn full_layers(&self) -> usize {
+        for z in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                for x in 0..BOARD_SIZE {
+                    if !self.points[x][y][z] {
+                        return z;
+                    }
+                }
+            }
+        }
+        return BOARD_SIZE;
+    }
+
+    fn top_free_only(&self) -> bool {
+        let mut heights: [[i32; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
+        let mut free = 0;
+        for y in 0..BOARD_SIZE {
+            for x in 0..BOARD_SIZE {
+                for z in 0..BOARD_SIZE {
+                    if self.points[x][y][z] {
+//                        println!("{} {} {}", x, y, z);
+                        heights[y][x] = z as i32 + 1;
+                    } else {
+                        free += 1;
+                    }
+                }
+            }
+        }
+        let mut free_from_the_top: i32 = 0;
+        for x in 0..BOARD_SIZE {
+            free_from_the_top += heights[x].iter().map(|v| { BOARD_SIZE as i32 - v }).sum::<i32>();
+        }
+
+        free == free_from_the_top
     }
 
     fn fill_with(&mut self, block_types: BlockTypes, point_order: &[Point; POINT_ORDER_SIZE]) {
@@ -257,23 +298,31 @@ impl Board {
     }
 
     fn fill_next(&mut self, block_types: &BlockTypes, next_block_type_index: usize, start_point_index: usize, point_order: &[Point; POINT_ORDER_SIZE]) -> bool {
-        let block = &block_types[next_block_type_index].create_block_position(&point_order[start_point_index]);
-        //println!("check points: {:?}", block);
+        let starting_point: &Point = &point_order[start_point_index];
+        let block = &block_types[next_block_type_index].create_block_position(starting_point);
+        // println!("check points (type: {}): {:?}", next_block_type_index, block);
+        if self.full_layers() > 4 {
+            println!("current: {:?}", self);
+        }
 
         if !self.put(block) { return false; };
 
         if self.full() {
-            println!("block: {:?}", block);
+            println!("solution: {:?}", block);
             return true;
         };
 
         //println!("{}", start_point_index);
         if self.has_no_holes() {
             for k in (start_point_index + 1)..POINT_ORDER_SIZE {
-                if !self.occupied(&point_order[k]) {
+                let next_point: &Point = &point_order[k];
+                if next_point.z - 1 > self.full_layers() as i32 {
+                    return false;
+                }
+                if !self.occupied(next_point) {
                     for block_type in 0..NUM_OF_BLOCK_TYPES {
                         if self.fill_next(&block_types, block_type, k, &point_order) {
-                            println!("block: {:?}", block);
+                            println!("solution: {:?}", block);
                             return true;
                         }
                     }
@@ -298,7 +347,6 @@ impl Board {
         }
         return true;
     }
-
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -345,12 +393,14 @@ fn generate_point_order<const LEN: usize>() -> [Point; LEN] {
     let init_point = build_point(0, 0, 0);
 
     let mut order: [Point; LEN] = [init_point; LEN];
-    for x in 0..BOARD_SIZE {
+    let mut k = 0;
+    for z in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
-            for z in 0..BOARD_SIZE {
-                let k = cantor_pairing(x, cantor_pairing(y, z));
+            for x in 0..BOARD_SIZE {
+                // let k = cantor_pairing(x, cantor_pairing(y, z));
 //                    println!("{:?}: {:?} {:?} {:?}", k, x, y, z);
-                order[k] = build_point(x as i32, y as i32, z as i32);
+                order[k as usize] = build_point(x as i32, y as i32, z as i32);
+                k += 1;
             }
         }
     }
