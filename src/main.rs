@@ -1,11 +1,11 @@
 use std::fmt;
 use std::cmp;
 
-const BOARD_SIZE: usize = 6;
+const BOARD_SIZE: usize = 4;
 
 const ALL_POINTS: usize = BOARD_SIZE.pow(3);
 
-const POINT_ORDER_SIZE: usize = (BOARD_SIZE + 1).pow(3) * 8;
+const POINT_ORDER_SIZE: usize = BOARD_SIZE.pow(3);
 
 const BLOCK_SIZE: usize = 4;
 
@@ -105,7 +105,8 @@ fn main() {
 
 struct Board {
     points: BoardType,
-    neighbours: [[[usize; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE],
+    layers_capacity: [i32; BOARD_SIZE],
+    full_layers: usize
 }
 
 impl fmt::Debug for Board {
@@ -134,37 +135,15 @@ impl fmt::Debug for Board {
 
 impl Board {
     fn create_empty_board() -> Board {
-        let mut board = Board {
+        Board {
             points: [[[false; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE],
-            neighbours: [[[6; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE],
-        };
-
-        for x in 0..BOARD_SIZE {
-            for y in 0..BOARD_SIZE {
-                board.neighbours[0][x][y] -= 1;
-                board.neighbours[x][0][y] -= 1;
-                board.neighbours[x][y][0] -= 1;
-
-                board.neighbours[BOARD_SIZE - 1][x][y] -= 1;
-                board.neighbours[x][BOARD_SIZE - 1][y] -= 1;
-                board.neighbours[x][y][BOARD_SIZE - 1] -= 1;
-            }
+            layers_capacity: [BOARD_SIZE.pow(2) as i32; BOARD_SIZE],
+            full_layers: 0
         }
-
-        board
     }
 
     fn full_layers(&self) -> usize {
-        for z in 0..BOARD_SIZE {
-            for y in 0..BOARD_SIZE {
-                for x in 0..BOARD_SIZE {
-                    if !self.points[x][y][z] {
-                        return z;
-                    }
-                }
-            }
-        }
-        return BOARD_SIZE;
+        self.full_layers
     }
 
     fn top_free_only(&self) -> bool {
@@ -206,8 +185,14 @@ impl Board {
         self.update(point, false);
     }
 
-    fn update(&mut self, point: &Point, new_val: bool) {
-        self.points[point.x as usize][point.y as usize][point.z as usize] = new_val;
+    fn update(&mut self, point: &Point, occupied: bool) {
+        self.points[point.x as usize][point.y as usize][point.z as usize] = occupied;
+        self.layers_capacity[point.z as usize] += if occupied { -1 } else { 1 };
+        if self.layers_capacity[point.z as usize] == 0 {
+            self.full_layers += 1;
+        } else if self.layers_capacity[point.z as usize] == 1 && !occupied {
+            self.full_layers -= 1;
+        }
     }
 
     fn put(&mut self, block: &BlockPosition) -> bool {
@@ -220,27 +205,8 @@ impl Board {
             }
         }
 
-        let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
         for point in points {
             self.occupy(point);
-            for offset in offsets {
-                let offset_x = point.x as i32 + offset.0;
-                let offset_y = point.y as i32 + offset.1;
-                let offset_z = point.z as i32 + offset.2;
-                if cmp::max(cmp::max(offset_x, offset_y), cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
-                    cmp::min(cmp::min(offset_x, offset_y), cmp::min(offset_z, 0)) > -1 {
-//                                println!("+block: {:?}", block);
-                    //                           println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
-                    if offset_x == 1 && offset_y == 0 && offset_z == 0 {
-//                                println!("board: {:?}", self);
-//                                println!("+block: {:?}", block);
-//                                println!("point: {:?}", point);
-//                            println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
-//                            println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
-                    }
-                    self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] -= 1;
-                }
-            }
         }
 
         return true;
@@ -250,59 +216,15 @@ impl Board {
         let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
         for point in &block.points {
             self.release(point);
-            for offset in offsets {
-                let offset_x = point.x as i32 + offset.0;
-                let offset_y = point.y as i32 + offset.1;
-                let offset_z = point.z as i32 + offset.2;
-                if cmp::max(cmp::max(offset_x, offset_y), cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
-                    cmp::min(cmp::min(offset_x, offset_y), cmp::min(offset_z, 0)) > -1 {
-                    if offset_x == 1 && offset_y == 0 && offset_z == 0 {
-//                                println!("-block: {:?}", block);
-//                            println!("{} {} {}", offset_x as usize, offset_y as usize, offset_z as usize);
-//                            println!("{:?}", self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize]);
-                    }
-                    self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] += 1;
-                }
-            }
         }
-    }
-
-    fn has_no_holes(&self) -> bool {
-        for x in 0..BOARD_SIZE {
-            for y in 0..BOARD_SIZE {
-                for z in 0..BOARD_SIZE {
-                    if !self.points[x][y][z] {
-                        if self.neighbours[x][y][z] == 0 {
-                            return false;
-                        }
-                        if self.neighbours[x][y][z] == 1 {
-                            let offsets = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)];
-                            for offset in offsets {
-                                let offset_x = x as i32 + offset.0;
-                                let offset_y = y as i32 + offset.1;
-                                let offset_z = z as i32 + offset.2;
-                                if cmp::max(cmp::max(offset_x, offset_y), cmp::max(offset_z, 0)) < (BOARD_SIZE as i32) &&
-                                    cmp::min(cmp::min(offset_x, offset_y), cmp::min(offset_z, 0)) > -1 &&
-                                    !self.points[offset_x as usize][offset_y as usize][offset_z as usize] &&
-                                    self.neighbours[offset_x as usize][offset_y as usize][offset_z as usize] < 3 {
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return true;
     }
 
     fn fill_next(&mut self, block_types: &BlockTypes, next_block_type_index: usize, start_point_index: usize, point_order: &[Point; POINT_ORDER_SIZE]) -> bool {
         let starting_point: &Point = &point_order[start_point_index];
         let block = &block_types[next_block_type_index].create_block_position(starting_point);
         // println!("check points (type: {}): {:?}", next_block_type_index, block);
-        if self.full_layers() > 4 {
-            println!("current: {:?}", self);
+        if self.full_layers() > 0 {
+            // println!("current: {:?}", self);
         }
 
         if !self.put(block) { return false; };
@@ -313,18 +235,18 @@ impl Board {
         };
 
         //println!("{}", start_point_index);
-        if self.has_no_holes() {
-            for k in (start_point_index + 1)..POINT_ORDER_SIZE {
-                let next_point: &Point = &point_order[k];
-                if next_point.z - 1 > self.full_layers() as i32 {
-                    return false;
-                }
-                if !self.occupied(next_point) {
-                    for block_type in 0..NUM_OF_BLOCK_TYPES {
-                        if self.fill_next(&block_types, block_type, k, &point_order) {
-                            println!("solution: {:?}", block);
-                            return true;
-                        }
+        for k in (start_point_index + 1)..POINT_ORDER_SIZE {
+            let next_point: &Point = &point_order[k];
+            let full_layers = self.full_layers();
+            // println!("next point: {:?}", next_point);
+            if (next_point.z > 1 + full_layers as i32) {
+                break;
+            }
+            if !self.occupied(next_point) {
+                for block_type in 0..NUM_OF_BLOCK_TYPES {
+                    if self.fill_next(&block_types, block_type, k, &point_order) {
+                        println!("solution: {:?}", block);
+                        return true;
                     }
                 }
             }
@@ -338,14 +260,7 @@ impl Board {
     }
 
     fn full(&self) -> bool {
-        for array2d in self.points {
-            for array in array2d {
-                for point_busy in array {
-                    if !point_busy { return false; }
-                }
-            }
-        }
-        return true;
+        self.full_layers == BOARD_SIZE
     }
 }
 
