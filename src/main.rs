@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cmp;
 
-const BOARD_SIZE: usize = 4;
+const BOARD_SIZE: usize = 6;
 
 const ALL_POINTS: usize = BOARD_SIZE.pow(3);
 
@@ -28,8 +28,8 @@ fn main() {
             p4: build_point(0, 1, 0),
         },
         BlockType {
-            p1: build_point(0, 0, 0),   //  |
-            p2: build_point(0, 0, -1),  // 0|00_
+            p2: build_point(0, 0, 0),   //  |
+            p1: build_point(0, 0, -1),  // 0|00_
             p3: build_point(1, 0, 0),   //
             p4: build_point(-1, 0, 0),
         },
@@ -41,9 +41,9 @@ fn main() {
         },
         BlockType {
             p2: build_point(0, 0, 0),  //  |
-            p1: build_point(-1, 0, 0), // <|0_
-            p3: build_point(0, 0, 1),  //
-            p4: build_point(0, 0, -1),
+            p3: build_point(-1, 0, 0), // <|0_
+            p4: build_point(0, 0, 1),  //
+            p1: build_point(0, 0, -1),
         },
         BlockType {
             p3: build_point(0, 0, 0),  //  |
@@ -54,8 +54,8 @@ fn main() {
         BlockType {
             p3: build_point(0, 0, 0),  // |
             p2: build_point(0, -1, 0), // |0_
-            p1: build_point(0, 0, 1),  //  v
-            p4: build_point(0, 0, -1),
+            p4: build_point(0, 0, 1),  //  v
+            p1: build_point(0, 0, -1),
         },
         BlockType {
             p2: build_point(0, 0, 0),  // |0
@@ -65,15 +65,15 @@ fn main() {
         },
         BlockType {
             p2: build_point(0, 0, 0),  //  |
-            p3: build_point(0, 0, 1),  // 0|x0_
+            p4: build_point(0, 0, 1),  // 0|x0_
             p1: build_point(-1, 0, 0), //
-            p4: build_point(1, 0, 0),
+            p3: build_point(1, 0, 0),
         },
         BlockType {
             p2: build_point(0, 0, 0),  // |
-            p4: build_point(1, 0, 0),  // |0>_
+            p3: build_point(1, 0, 0),  // |0>_
             p1: build_point(0, 0, -1), //
-            p3: build_point(0, 0, 1),
+            p4: build_point(0, 0, 1),
         },
         BlockType {
             p2: build_point(0, 0, 0),  // |0
@@ -106,19 +106,20 @@ fn main() {
 struct Board {
     points: BoardType,
     layers_capacity: [i32; BOARD_SIZE],
+    height: [[usize; BOARD_SIZE]; BOARD_SIZE],
     full_layers: usize
 }
 
 impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut heights: [[i32; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
+        let mut heights: [[usize; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
         let mut free = 0;
         for y in 0..BOARD_SIZE {
             for x in 0..BOARD_SIZE {
                 for z in 0..BOARD_SIZE {
                     if self.points[x][y][z] {
 //                        println!("{} {} {}", x, y, z);
-                        heights[y][x] = z as i32 + 1;
+                        heights[y][x] = z + 1;
                     } else {
                         free += 1;
                     }
@@ -126,8 +127,25 @@ impl fmt::Debug for Board {
             }
         }
         write!(f, "\n---");
+        let mut mismatch = false;
         for x in 0..BOARD_SIZE {
             write!(f, "\n{:?}", heights[x]);
+            write!(f, "\n{:?}", self.height[x]);
+            if heights[x] != self.height[x] {
+                mismatch = true;
+            }
+        }
+        if mismatch {
+            for z in 0..BOARD_SIZE {
+                for y in 0..BOARD_SIZE {
+                    for x in 0..BOARD_SIZE {
+                        if !self.points[x][y][z] {
+                            write!(f, "\n{} {} {}", x, y, z);
+                        }
+                    }
+                }
+            }
+            panic!("stop");
         }
         write!(f, "\n--- free: {:?} full layers: {}", free, self.full_layers())
     }
@@ -138,35 +156,13 @@ impl Board {
         Board {
             points: [[[false; BOARD_SIZE]; BOARD_SIZE]; BOARD_SIZE],
             layers_capacity: [BOARD_SIZE.pow(2) as i32; BOARD_SIZE],
+            height: [[0; BOARD_SIZE]; BOARD_SIZE],
             full_layers: 0
         }
     }
 
     fn full_layers(&self) -> usize {
         self.full_layers
-    }
-
-    fn top_free_only(&self) -> bool {
-        let mut heights: [[i32; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
-        let mut free = 0;
-        for y in 0..BOARD_SIZE {
-            for x in 0..BOARD_SIZE {
-                for z in 0..BOARD_SIZE {
-                    if self.points[x][y][z] {
-//                        println!("{} {} {}", x, y, z);
-                        heights[y][x] = z as i32 + 1;
-                    } else {
-                        free += 1;
-                    }
-                }
-            }
-        }
-        let mut free_from_the_top: i32 = 0;
-        for x in 0..BOARD_SIZE {
-            free_from_the_top += heights[x].iter().map(|v| { BOARD_SIZE as i32 - v }).sum::<i32>();
-        }
-
-        free == free_from_the_top
     }
 
     fn fill_with(&mut self, block_types: BlockTypes, point_order: &[Point; POINT_ORDER_SIZE]) {
@@ -177,22 +173,32 @@ impl Board {
         self.points[point.x as usize][point.y as usize][point.z as usize]
     }
 
-    fn occupy(&mut self, point: &Point) {
-        self.update(point, true);
+    fn occupy(&mut self, point: &Point) -> bool {
+        self.update(point, true)
     }
 
     fn release(&mut self, point: &Point) {
         self.update(point, false);
     }
 
-    fn update(&mut self, point: &Point, occupied: bool) {
-        self.points[point.x as usize][point.y as usize][point.z as usize] = occupied;
-        self.layers_capacity[point.z as usize] += if occupied { -1 } else { 1 };
-        if self.layers_capacity[point.z as usize] == 0 {
+    fn update(&mut self, point: &Point, occupied: bool) -> bool {
+        let x = point.x as usize;
+        let y = point.y as usize;
+        let z = point.z as usize;
+        self.points[x][y][z] = occupied;
+        self.layers_capacity[z] += if occupied { -1 } else { 1 };
+        if occupied {
+            self.height[y][x] += 1;
+        } else {
+            self.height[y][x] -= 1;
+        }
+        if self.layers_capacity[z] == 0 {
             self.full_layers += 1;
-        } else if self.layers_capacity[point.z as usize] == 1 && !occupied {
+        } else if self.layers_capacity[z] == 1 && !occupied {
             self.full_layers -= 1;
         }
+
+        z == 0 || self.points[x][y][z - 1]
     }
 
     fn put(&mut self, block: &BlockPosition) -> bool {
@@ -205,11 +211,14 @@ impl Board {
             }
         }
 
+        let mut hole = false;
         for point in points {
-            self.occupy(point);
+            if !self.occupy(point) {
+                hole = true;
+            }
         }
 
-        return true;
+        return !hole;
     }
 
     fn take(&mut self, block: &BlockPosition) {
@@ -223,8 +232,8 @@ impl Board {
         let starting_point: &Point = &point_order[start_point_index];
         let block = &block_types[next_block_type_index].create_block_position(starting_point);
         // println!("check points (type: {}): {:?}", next_block_type_index, block);
-        if self.full_layers() > 0 {
-            // println!("current: {:?}", self);
+        if self.full_layers() > 2 {
+            println!("current: {:?}", self);
         }
 
         if !self.put(block) { return false; };
@@ -239,7 +248,7 @@ impl Board {
             let next_point: &Point = &point_order[k];
             let full_layers = self.full_layers();
             // println!("next point: {:?}", next_point);
-            if (next_point.z > 1 + full_layers as i32) {
+            if next_point.z > 1 + full_layers as i32 {
                 break;
             }
             if !self.occupied(next_point) {
