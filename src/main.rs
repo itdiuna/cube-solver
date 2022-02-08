@@ -112,42 +112,11 @@ struct Board {
 
 impl fmt::Debug for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut heights: [[usize; BOARD_SIZE]; BOARD_SIZE] = [[0; BOARD_SIZE]; BOARD_SIZE];
-        let mut free = 0;
-        for y in 0..BOARD_SIZE {
-            for x in 0..BOARD_SIZE {
-                for z in 0..BOARD_SIZE {
-                    if self.points[x][y][z] {
-//                        println!("{} {} {}", x, y, z);
-                        heights[y][x] = z + 1;
-                    } else {
-                        free += 1;
-                    }
-                }
-            }
-        }
         write!(f, "\n---");
-        let mut mismatch = false;
         for x in 0..BOARD_SIZE {
-            write!(f, "\n{:?}", heights[x]);
             write!(f, "\n{:?}", self.height[x]);
-            if heights[x] != self.height[x] {
-                mismatch = true;
-            }
         }
-        if mismatch {
-            for z in 0..BOARD_SIZE {
-                for y in 0..BOARD_SIZE {
-                    for x in 0..BOARD_SIZE {
-                        if !self.points[x][y][z] {
-                            write!(f, "\n{} {} {}", x, y, z);
-                        }
-                    }
-                }
-            }
-            panic!("stop");
-        }
-        write!(f, "\n--- free: {:?} full layers: {}", free, self.full_layers())
+        write!(f, "\n--- full layers: {}", self.full_layers())
     }
 }
 
@@ -201,13 +170,13 @@ impl Board {
         z == 0 || self.points[x][y][z - 1]
     }
 
-    fn put(&mut self, block: &BlockPosition) -> bool {
+    fn put(&mut self, block: &BlockPosition) -> BlockPutStatus {
         let points = &block.points;
         for point in points {
             if cmp::max(cmp::max(0, point.x), cmp::max(point.y, point.z)) >= BOARD_SIZE as i32 ||
                 cmp::min(cmp::min(0, point.x), cmp::min(point.y, point.z)) < 0 as i32 ||
                 self.occupied(point) {
-                return false;
+                return BlockPutStatus::Declined;
             }
         }
 
@@ -217,8 +186,11 @@ impl Board {
                 hole = true;
             }
         }
+        if hole {
+            return BlockPutStatus::DoneWithHole;
+        }
 
-        return !hole;
+        return BlockPutStatus::Done;
     }
 
     fn take(&mut self, block: &BlockPosition) {
@@ -232,11 +204,14 @@ impl Board {
         let starting_point: &Point = &point_order[start_point_index];
         let block = &block_types[next_block_type_index].create_block_position(starting_point);
         // println!("check points (type: {}): {:?}", next_block_type_index, block);
-        if self.full_layers() > 2 {
-            println!("current: {:?}", self);
+        if self.full_layers() > 4 {
+            // println!("{:?}", self);
         }
 
-        if !self.put(block) { return false; };
+        let put_status = self.put(block);
+        if !put_status.accepted() {
+            return false;
+        }
 
         if self.full() {
             println!("solution: {:?}", block);
@@ -244,18 +219,20 @@ impl Board {
         };
 
         //println!("{}", start_point_index);
-        for k in (start_point_index + 1)..POINT_ORDER_SIZE {
-            let next_point: &Point = &point_order[k];
-            let full_layers = self.full_layers();
-            // println!("next point: {:?}", next_point);
-            if next_point.z > 1 + full_layers as i32 {
-                break;
-            }
-            if !self.occupied(next_point) {
-                for block_type in 0..NUM_OF_BLOCK_TYPES {
-                    if self.fill_next(&block_types, block_type, k, &point_order) {
-                        println!("solution: {:?}", block);
-                        return true;
+        if put_status.prospective() {
+            for k in (start_point_index + 1)..POINT_ORDER_SIZE {
+                let next_point: &Point = &point_order[k];
+                let full_layers = self.full_layers();
+                // println!("next point: {:?}", next_point);
+                if next_point.z > 1 + full_layers as i32 {
+                    break;
+                }
+                if !self.occupied(next_point) {
+                    for block_type in 0..NUM_OF_BLOCK_TYPES {
+                        if self.fill_next(&block_types, block_type, k, &point_order) {
+                            println!("solution: {:?}", block);
+                            return true;
+                        }
                     }
                 }
             }
@@ -335,3 +312,25 @@ fn cantor_pairing(k1: usize, k2: usize) -> usize {
     (k1 + k2) * (k1 + k2 + 1) / 2 + k2
 }
 
+#[derive(Debug)]
+enum BlockPutStatus {
+    Done,
+    Declined,
+    DoneWithHole
+}
+
+impl BlockPutStatus {
+    fn accepted(&self) -> bool {
+        match self {
+            BlockPutStatus::Declined => false,
+            _ => true
+        }
+    }
+
+    fn prospective(&self) -> bool {
+        match self {
+            BlockPutStatus::Done => true,
+            _ => false
+        }
+    }
+}
