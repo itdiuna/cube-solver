@@ -47,7 +47,7 @@ fn main() {
         },
         BlockType {
             p3: build_point(0, 0, 0),  //  |
-            p2: build_point(1, -1, 0), // 0|00_
+            p2: build_point(0, -1, 0), // 0|00_
             p1: build_point(-1, 0, 0), //   v
             p4: build_point(1, 0, 0),
         },
